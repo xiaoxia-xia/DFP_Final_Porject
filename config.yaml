@@ -1,0 +1,2 @@
+data_sources:
+  zillow_zori_city_url: "https://files.zillowstatic.com/research/public_csvs/zori/City_zori_uc_sfrcondomfr_sm_month.csv"
