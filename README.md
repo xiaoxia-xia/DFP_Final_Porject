@@ -5,7 +5,11 @@ To get started, you only need to run one command. This will create a local Pytho
 `make all`
 
 Usage: Querying Rent Data
-Once the setup is complete, you can query the rent data for a specific city and date using the zori_query.py script.
+Once the setup is complete, you can use .venv by 
+
+`source .venv/bin/activate` and
+
+you can query the rent data for a specific city and date using the zori_query.py script.
 
 The script requires a city, state abbreviation, and a year-month (YYYY-MM) to retrieve the rent index.
 

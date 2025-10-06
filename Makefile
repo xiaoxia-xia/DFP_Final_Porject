@@ -17,3 +17,6 @@ install: venv
 
 download:
 	$(PY) src/data/download_zillow.py --out data/raw/zori_city.csv
+
+avg-by-year:
+	$(PY) src/pipelines/make_zori_avg_by_year.py
