@@ -1,23 +1,39 @@
-# Add 'all' to thePHONY list and make it the default target
-.PHONY: all venv install download
-
-VENV?=.venv
-PY=$(VENV)/bin/python
+PY=python3
+VENV=.venv
 PIP=$(VENV)/bin/pip
+PYBIN=$(VENV)/bin/python
 
-# 'all' is the first target, so it's the default.
-# Running 'make' will now be the same as 'make all'.
-all: install download
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Targets:"
+	@echo "  venv               - create venv & install deps"
+	@echo "  data-zillow        - build data/rent_data.csv"
+	@echo "  data-crime         - build data/crime_data.csv   (requires FBI_API_KEY)"
+	@echo "  data-salary        - scrape + fan-out salary CSVs"
+	@echo "  data-all           - run all data steps"
+	@echo "  main               - run the app (interactive or with CLI flags)"
 
 venv:
-	python3 -m venv $(VENV)
+	@test -d $(VENV) || $(PY) -m venv $(VENV)
+	@$(PIP) install --upgrade pip
+	@$(PIP) install -r requirements.txt
+	@$(PYBIN) -m playwright install
 
-install: venv
-	$(PIP) install -r requirements.txt
+data-zillow: venv
+	@$(PYBIN) src/pipelines/zillow_to_rent_data.py
 
-download:
-	$(PY) src/data/download_zillow.py --out data/raw/zori_city.csv
-	
-avg-by-year:
-	$(PY) src/pipelines/make_zori_avg_by_year.py
+data-crime: venv
+	@[ -n "$$FBI_API_KEY" ] || (echo "FBI_API_KEY not set"; exit 1)
+	@$(PYBIN) src/pipelines/fbi_crime_pipeline.py
 
+data-salary: venv
+	@echo "If first time, run: .venv/bin/python src/scrapers/login_levels.py"
+	@$(PYBIN) src/scrapers/scrape_levels.py
+	@$(PYBIN) src/pipelines/salary_adapter.py
+
+data-all: data-zillow data-crime data-salary
+	@echo "✓ All data ready"
+
+main: venv
+	@$(PYBIN) urbanLens_team_main.py
