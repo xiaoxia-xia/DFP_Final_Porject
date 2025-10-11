@@ -1,36 +1,11 @@
 #!/usr/bin/env python3
 import pandas as pd
 import os
-
-
+from src.scrapers.scrape_levels import scrape_levels_main
+from src.pipelines.fbi_crime_pipeline import fbi_crime_pipeline_main
+from src.pipelines.zillow_to_rent_data import zillow_to_rent_main
+import asyncio
 import sys, subprocess
-
-def _run_step(label, script_path, extra_args=None):
-    extra_args = extra_args or []
-    if not os.path.exists(script_path):
-        print(f"[prep] Skipped {label}: missing {script_path}")
-        return
-    print(f"[prep] {label} ...")
-    cmd = [sys.executable, script_path] + extra_args
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[prep] {label} failed (exit {e.returncode}).")
-        raise
-
-def _prepare_all_pipelines():
-    # Assume project root is the folder that contains this file
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    zillow = os.path.join(base_dir, "src", "pipelines", "zillow_to_rent_data.py")
-    fbi    = os.path.join(base_dir, "src", "pipelines", "fbi_crime_pipeline.py")
-    levels = os.path.join(base_dir, "src", "scrapers", "scrape_levels.py")
-    adapt  = os.path.join(base_dir, "src", "pipelines", "salary_adapter.py")
-
-    # Run in dependency order
-    _run_step("Zillow → rent_data.csv", zillow)
-    _run_step("FBI → crime_data.csv", fbi)
-    _run_step("Levels.fyi scrape → software-devops-junior-avg-salary.csv", levels)
-    _run_step("Salary fan-out → per-job salary CSVs", adapt)
 
 class CityAffordabilityAnalyzer:
     def __init__(self):
@@ -41,11 +16,11 @@ class CityAffordabilityAnalyzer:
         
         # Job mapping
         self.job_mapping = {
-            '1': 'Data Analyst',
-            '2': 'Analyst', 
-            '3': 'Data Scientist',
-            '4': 'Software Engineer',
-            '5': 'Software Development Engineer'
+            '1': 'Web Developer',
+            '2': 'Machine Learning Engineer', 
+            '3': 'Data Engineer',
+            '4': 'Full-Stack Software Engineer',
+            '5': 'Analytics Product Manager',
         }
         
         # State abbreviation mapping
@@ -157,11 +132,11 @@ class CityAffordabilityAnalyzer:
 
             # Load salary data for each job title
             salary_files = {
-                'Data Analyst': 'data_analyst_salary.csv',
-                'Analyst': 'analyst_salary.csv', 
-                'Data Scientist': 'data_scientist_salary.csv',
-                'Software Engineer': 'software_engineer_salary.csv',
-                'Software Development Engineer': 'software_development_engineer_salary.csv'
+                "Web Developer": "web_developer_salary.csv",
+                "Machine Learning Engineer": "machine_learning_engineer_salary.csv",
+                "Data Engineer":  "data_engineer_salary.csv",
+                "Full-Stack Software Engineer": "full_stack_software_engineer_salary.csv",
+                "Analytics Product Manager": "analytics_product_manager_salary.csv",
             }
 
             missing_salary_files = []
@@ -295,16 +270,54 @@ class CityAffordabilityAnalyzer:
                   f"{city_data['Average Rent']:<12,.0f} {city_data['Affordability Index']:<12.2f}")
         
         print(f"{'='*80}")
-        print("Note: Composite Index = (Salary / Rent) * (1 / Crime Score) \\n Higher composite index indicates better balance between salary, cost of living, and safety")
+        print("Note: Composite Index = (Salary / Rent) * (1 / Crime Score) \n Higher composite index indicates better balance between salary, cost of living, and safety")
+
+def if_need_web_scraping(job_mapping):
+    def show_menu() -> None:
+        print("To get ready to web scrap job data from levels")
+        print("Since anti web scrap mechenism in levels.fyi, each time run we up to 1 job updated in dataset\n")
+        print("Please select a job title to scrape (0 to skip):")
+        for key in sorted(job_mapping.keys(), key=int):
+            print(f"{key}. {job_mapping[key]}")
+        print("0. No web scraping this time")
+
+    def prompt_choice() -> str:
+        valid = set(job_mapping.keys()) | {'0'}
+        while True:
+            choice = input("Enter a number (0–5): ").strip()
+            if choice in valid:
+                return choice
+            print("Invalid choice. Please enter 0, 1, 2, 3, 4, or 5.")
+    
+
+    show_menu()
+    choice = prompt_choice()
+
+    if choice == '0':
+        print("Okay, skipping web scraping this time.")
+        return
+
+    title = job_mapping[choice]
+    print(f"You selected: {title}")
+    # Pass the NUMBER to your async entrypoint, per your requirement
+    asyncio.run(scrape_levels_main(job_mapping[choice]))
+
 
 def main():
     """Main program"""
     analyzer = CityAffordabilityAnalyzer()
+    job_mapping = analyzer.job_mapping
 
-    # Always prepare data before analysis
-    _prepare_all_pipelines()
-    
-    print("City Employment Affordability Analysis System\n")
+    print("To prepare zillow rent dataset, it should be taken 1 second")
+    zillow_to_rent_main()
+
+    print("To prepare fbi crime rate databset, it would take 2 min")
+    # fbi_crime_pipeline_main()
+
+    if_need_web_scraping(job_mapping)
+
+
+
     
     # Load data
     if not analyzer.load_data():
@@ -313,11 +326,8 @@ def main():
     
     while True:
         print("\nPlease select a job position:")
-        print("1. Data Analyst")
-        print("2. Analyst") 
-        print("3. Data Scientist")
-        print("4. Software Engineer")
-        print("5. Software Development Engineer")
+        for key in sorted(job_mapping.keys(), key=int):
+            print(f"{key}. {job_mapping[key]}")
         print("0. Exit Program")
         
         job_choice = input("\nEnter job number (0-5): ").strip()
@@ -340,7 +350,7 @@ def main():
             continue
         
         # Perform analysis
-        print(f"\\nAnalyzing {selected_job} positions in {state_input} state...")
+        print(f"\nAnalyzing {selected_job} positions in {state_input} state...")
         results, crime_score = analyzer.analyze_cities(selected_job, state_input)
         
         # Display results

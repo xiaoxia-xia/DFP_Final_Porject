@@ -127,7 +127,7 @@ def fetch_rate_series(state: str, offense: str) -> List[Dict]:
     raise RuntimeError(f"Request failed {state}/{offense}: {last}")
 
 # ========= MAIN =========
-def main():
+def fbi_crime_pipeline_main():
     recs = []
     for st in STATES:
         try:
@@ -175,4 +175,4 @@ def main():
 
 if __name__ == "__main__":
     print(f"Period: {FROM_MM_YYYY}~{TO_MM_YYYY}")
-    main()
+    fbi_crime_pipeline_main()

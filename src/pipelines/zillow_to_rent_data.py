@@ -30,7 +30,7 @@ def last_n_month_cols(df: pd.DataFrame, n: int):
     dates.sort()
     return [c for _, c in dates[-n:]]
 
-def main():
+def zillow_to_rent_main():
     print("Downloading Zillow ZORI city CSV...")
     download(ZILLOW_URL, RAW_CSV)
 
@@ -57,4 +57,4 @@ def main():
     print(f"Wrote {OUT_CSV.resolve()}")
 
 if __name__ == "__main__":
-    main()
+    zillow_to_rent_main()
